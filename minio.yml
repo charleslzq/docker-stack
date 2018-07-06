@@ -1,0 +1,101 @@
+version: '3.6'
+
+services:
+  minio1:
+    image: minio/minio
+    volumes:
+      - /home/admin/minio:/export
+    ports:
+      - "9001:9000"
+    networks:
+      - net
+    deploy:
+      placement:
+        constraints:
+          - node.labels.minio == 0
+      restart_policy:
+        delay: 10s
+        max_attempts: 10
+        window: 60s
+    command: server http://minio1/export http://minio2/export http://minio3/export http://minio4/export
+    secrets:
+      - secret_key
+      - access_key
+  minio2:
+    image: minio/minio
+    volumes:
+      - /home/admin/minio:/export
+    ports:
+      - "9002:9000"
+    networks:
+      - net
+    deploy:
+      placement:
+        constraints:
+          - node.labels.minio == 1
+      restart_policy:
+        delay: 10s
+        max_attempts: 10
+        window: 60s
+    command: server http://minio1/export http://minio2/export http://minio3/export http://minio4/export
+    secrets:
+      - secret_key
+      - access_key
+  minio3:
+    image: minio/minio
+    volumes:
+      - /home/admin/minio:/export
+    ports:
+      - "9003:9000"
+    networks:
+      - net
+    deploy:
+      placement:
+        constraints:
+          - node.labels.minio == 2
+      restart_policy:
+        delay: 10s
+        max_attempts: 10
+        window: 60s
+    command: server http://minio1/export http://minio2/export http://minio3/export http://minio4/export
+    secrets:
+      - secret_key
+      - access_key
+  minio4:
+    image: minio/minio
+    volumes:
+      - /home/admin/minio_b:/export
+    ports:
+      - "9004:9000"
+    networks:
+      - net
+    deploy:
+      placement:
+        constraints:
+          - node.labels.minio == 0
+      restart_policy:
+        delay: 10s
+        max_attempts: 10
+        window: 60s
+    command: server http://minio1/export http://minio2/export http://minio3/export http://minio4/export
+    secrets:
+      - secret_key
+      - access_key
+
+networks:
+  net:
+    driver: overlay
+    ipam: 
+      driver: default
+      config:
+        - subnet: 172.16.110.0/24
+
+secrets:
+  secret_key:
+    external: 
+      name: minio_secret_key
+  access_key:
+    external:
+      name: minio_access_key
+
+  

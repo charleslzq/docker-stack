@@ -1,0 +1,86 @@
+version: '3.6'
+
+networks: 
+  net:
+    driver: overlay
+    ipam: 
+      driver: default
+      config:
+        - subnet: 172.16.220.0/24
+
+configs:
+  privoxy:
+    external: true
+  ssr-client:
+    external: true
+
+services:
+  ssr:
+    image: charleslzq/ssr:latest
+    networks:
+      - net
+    ports: 
+      - "6713:51348"
+    environment:
+      - METHOD=aes-256-cfb
+      - PROTOCOL=auth_sha1_v4
+      - OBFS=tls1.2_ticket_auth
+      - PASSWORD=a3k3Qr.L2?.YPs{f86E>
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.proxy == server
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+        reservations:
+          cpus: '0.1'
+          memory: 16M
+  ssr-client:
+    image: charleslzq/ssr-client:latest
+    networks:
+      - net
+    ports:
+      - "1080:1080"
+    extra_hosts:
+      - "ssr-server:13.230.61.105"
+    configs:
+      - source: ssr-client
+        target: /etc/ssr/config.json
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.proxy != server
+          - node.labels.proxy != none
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+        reservations:
+          cpus: '0.1'
+          memory: 16M
+  privoxy:
+    image: charleslzq/privoxy:latest
+    networks:
+      - net
+    ports:
+      - "1090:8118"
+    configs:
+      - source: privoxy
+        target: /etc/privoxy/config
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.proxy != server
+          - node.labels.proxy != none
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+        reservations:
+          cpus: '0.1'
+          memory: 16M

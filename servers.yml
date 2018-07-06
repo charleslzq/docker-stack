@@ -1,0 +1,125 @@
+version: '3.6'
+
+networks: 
+  server:
+    external: true
+
+volumes:
+  jenkins_home:
+    external: true
+  portainer_data:
+    external: true
+  files_data:
+    external: true
+  files_tmp:
+    external: true
+
+configs:
+  frp_server_config:
+    external: true
+
+services:
+  files:
+    image: hacdias/filemanager:latest
+    command: /filemanager --port 80 --database /data/database.db --scope /srv
+    networks: 
+      - server
+    volumes:
+      - /home/ec2-user/files:/srv
+      - files_data:/data
+      - files_tmp:/tmp
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 32M
+        reservations:
+          memory: 8M
+  jenkins:
+    image: jenkins/jenkins:lts
+    networks: 
+      - server
+    volumes:
+      - jenkins_home:/var/jenkins_home
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 768M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+  portainer:
+    image: portainer/portainer:latest
+    command: -H unix:///var/run/docker.sock
+    networks: 
+      - server
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+        reservations:
+          cpus: '0.1'
+          memory: 8M
+  frp:
+    image: charleslzq/frp:latest
+    networks: 
+      - server
+    ports:
+      - "7000:7000"
+      - "20000-20100:20000-20100"
+    volumes:
+      - /home/ec2-user/files/log/frp:/var/log
+    configs:
+      - source: frp_server_config
+        target: /etc/frp/frps.ini
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+        reservations:
+          cpus: '0.1'
+          memory: 8M
+  nginx:
+    image: nginx:latest
+    networks: 
+      - server
+    ports:
+      - "80:80"
+    volumes:
+      - /home/ec2-user/files/nginx/conf:/etc/nginx:ro
+      - /home/ec2-user/files/nginx/logs:/var/nginx/logs
+      - /home/ec2-user/files/nginx/html:/usr/share/nginx/html:ro
+    depends_on:
+      - portinaer
+      - files
+      - jenkins
+      - frp
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 16M
+        reservations:
+          cpus: '0.1'
+          memory: 4M
