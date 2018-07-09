@@ -1,0 +1,67 @@
+version: '3.6'
+
+networks:
+  ui:
+    external: true
+  minio:
+    external: true
+  expose:
+    external: true
+
+volumes:
+  portainer_data:
+
+services:
+  portainer:
+    image: portainer/portainer:latest
+    command: -H unix:///var/run/docker.sock
+    networks:
+      - ui
+      - minio
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+        reservations:
+          cpus: '0.1'
+          memory: 8M
+      labels:
+        - traefik.docker.network=ui
+        - traefik.port=9000
+        - traefik.frontend.rule=Host:portainer.aws.zenq.me
+  traefik:
+    image: traefik
+    command: --docker --docker.swarmMode --docker.domain=aws.zenq.me --docker.watch --api 
+    networks:
+      - ui
+      - minio
+      - expose
+    ports:
+      - "80:80"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 32M
+        reservations:
+          cpus: '0.1'
+          memory: 8M
+      labels:
+        - traefik.docker.network=ui
+        - traefik.config.port=8080
+        - traefik.config.frontend.rule=Host:aws.zenq.me

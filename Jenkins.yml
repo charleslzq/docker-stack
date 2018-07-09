@@ -1,0 +1,27 @@
+version: '3.6'
+
+networks:
+  expose:
+    external: true
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts
+    networks: 
+      - expose
+    ports:
+      - "50000:50000"
+    volumes:
+      - /data/volumes/jenkins:/var/jenkins_home
+    deploy:
+      resources:
+        limits:
+          cpus: '0.2'
+          memory: 768M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+      labels:
+        - traefik.docker.network=expose
+        - traefik.config.port=8080
+        - traefik.config.frontend.rule=Host:jenkins.aws.zenq.me
