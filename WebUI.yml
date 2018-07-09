@@ -17,7 +17,6 @@ services:
     command: -H unix:///var/run/docker.sock
     networks:
       - ui
-      - minio
     ports:
       - "9000:9000"
     volumes:
